@@ -1,0 +1,59 @@
+{
+  "name": "TerraBellapp",
+  "short_name": "Horizons",
+  "description": "Sistema de reservas para áreas sociales - Gestiona y reserva espacios comunes de forma fácil y rápida",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#008B8B",
+  "theme_color": "#008B8B",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "https://horizons-cdn.hostinger.com/9b4c3272-3c01-4058-8a3e-b8217d9b83d1/794e7397aff4e7df1e0ee90e316d1233.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://horizons-cdn.hostinger.com/9b4c3272-3c01-4058-8a3e-b8217d9b83d1/794e7397aff4e7df1e0ee90e316d1233.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pantalla principal de reservas"
+    },
+    {
+      "src": "/screenshots/mobile-calendar.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Calendario de disponibilidad"
+    }
+  ],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Nueva Reserva",
+      "short_name": "Reservar",
+      "description": "Crear una nueva reserva rápidamente",
+      "url": "/dashboard?action=new",
+      "icons": [{ "src": "https://horizons-cdn.hostinger.com/9b4c3272-3c01-4058-8a3e-b8217d9b83d1/794e7397aff4e7df1e0ee90e316d1233.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mis Reservas",
+      "short_name": "Reservas",
+      "description": "Ver mis reservas activas",
+      "url": "/dashboard?view=reservations",
+      "icons": [{ "src": "https://horizons-cdn.hostinger.com/9b4c3272-3c01-4058-8a3e-b8217d9b83d1/794e7397aff4e7df1e0ee90e316d1233.png", "sizes": "192x192" }]
+    }
+  ]
+}
