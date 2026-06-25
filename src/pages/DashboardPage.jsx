@@ -2,31 +2,35 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import ReservationForm from '@/components/ReservationForm';
 import Dashboard from '@/components/Dashboard';
 import useReservations from '@/hooks/useReservations';
 import { useToast } from "@/components/ui/use-toast";
 import MyReservations from '@/components/MyReservations';
+import ProfileModal from '@/components/ProfileModal';
 
 const DashboardPage = ({ onLogout }) => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
-  
-  const { 
-    handleReservation, 
-    cancelReservation, 
+
+  const {
+    handleReservation,
+    cancelReservation,
     getUserReservations,
+    getAllUserReservations,
     loading: reservationsLoading,
     isTimeSlotTaken,
     refetch
   } = useReservations(profile);
-  
+
   const [view, setView] = useState('dashboard'); // 'dashboard', 'form', 'myReservations'
   const [selectedArea, setSelectedArea] = useState(null);
-  
-  const userReservations = getUserReservations();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [localProfile, setLocalProfile] = useState(profile);
+
+  const allUserReservations = getAllUserReservations();
 
   const handleSelectArea = (area) => {
     setSelectedArea(area);
@@ -47,18 +51,22 @@ const DashboardPage = ({ onLogout }) => {
     const newReservation = await handleReservation(area, date, time);
     if (newReservation) {
       toast({
-        title: "🎉 ¡Reservación Exitosa!",
+        title: "Reservacion Exitosa",
         description: `Tu reservación para ${newReservation.area_name} ha sido confirmada.`,
         duration: 5000,
       });
       handleBackToDashboard();
     }
   };
-  
+
+  const handleProfileUpdated = (updated) => {
+    setLocalProfile(updated);
+  };
+
   const renderContent = () => {
     if (view === 'form' && selectedArea) {
       return (
-        <ReservationForm 
+        <ReservationForm
           selectedArea={selectedArea}
           onBack={handleBackToDashboard}
           onConfirmReservation={handleConfirmReservation}
@@ -66,24 +74,26 @@ const DashboardPage = ({ onLogout }) => {
       );
     }
 
-    if(view === 'myReservations') {
-      return(
-        <MyReservations 
-          reservations={userReservations} 
-          onCancel={cancelReservation} 
-          onNewReservation={() => setView('dashboard')} 
+    if (view === 'myReservations') {
+      return (
+        <MyReservations
+          reservations={allUserReservations}
+          onCancel={cancelReservation}
+          onNewReservation={() => setView('dashboard')}
           loading={reservationsLoading}
         />
-      )
+      );
     }
 
     return (
-      <Dashboard 
-        onSelectArea={handleSelectArea} 
+      <Dashboard
+        onSelectArea={handleSelectArea}
         onShowMyReservations={handleShowMyReservations}
       />
     );
   };
+
+  const displayProfile = localProfile || profile;
 
   return (
     <>
@@ -93,33 +103,49 @@ const DashboardPage = ({ onLogout }) => {
       </Helmet>
       <div className="min-h-screen p-4 md:p-8">
         <header className="flex justify-between items-center mb-8">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }} 
-            animate={{ opacity: 1, x: 0 }} 
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
             className="flex items-center gap-3"
           >
-             <img 
-               src="/icons/icon-192x192.png" 
-               alt="TerraBell Logo" 
-               className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg shadow-brand-500/20" 
-             />
-             <div>
-               <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-brand-300">
-                 Bienvenido, {profile?.full_name || user?.email}
-               </h1>
-               <p className="text-brand-200">Aquí puedes gestionar tus reservaciones.</p>
-             </div>
+            <img
+              src="/icons/icon-192x192.png"
+              alt="TerraBell Logo"
+              className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg shadow-brand-500/20"
+            />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-brand-300">
+                Bienvenido, {displayProfile?.full_name || user?.email}
+              </h1>
+              <p className="text-brand-200">Aquí puedes gestionar tus reservaciones.</p>
+            </div>
           </motion.div>
-          <Button onClick={onLogout} variant="ghost" className="text-brand-300 hover:text-white hover:bg-brand-500/20">
-            <LogOut className="mr-2 h-4 w-4" /> Cerrar Sesión
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsProfileOpen(true)}
+              variant="ghost"
+              className="text-brand-300 hover:text-white hover:bg-brand-500/20"
+            >
+              <User className="mr-2 h-4 w-4" /> Mi Perfil
+            </Button>
+            <Button onClick={onLogout} variant="ghost" className="text-brand-300 hover:text-white hover:bg-brand-500/20">
+              <LogOut className="mr-2 h-4 w-4" /> Cerrar Sesión
+            </Button>
+          </div>
         </header>
 
         <main>
           {renderContent()}
         </main>
       </div>
+
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        profile={displayProfile}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </>
   );
 };

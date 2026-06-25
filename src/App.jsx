@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import AuthPage from '@/pages/AuthPage';
-import DashboardPage from '@/pages/DashboardPage';
-import AdminPage from '@/pages/AdminPage';
-import GuardiaPage from '@/pages/GuardiaPage';
-import GuardiaLandingPage from '@/pages/GuardiaLandingPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import PWAStatus from '@/components/PWAStatus';
 import { Loader2, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
+
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
+const GuardiaPage = lazy(() => import('@/pages/GuardiaPage'));
+const GuardiaLandingPage = lazy(() => import('@/pages/GuardiaLandingPage'));
 
 // 1. Reusable Loading Screen Component
 const LoadingScreen = ({ text = "" }) => (
@@ -204,53 +205,55 @@ function App() {
         {/* PWA Install Prompt */}
         <PWAInstallPrompt />
 
-        <Routes>
-          {/* Root Route: Decides whether to show Login or Redirect based on Role */}
-          <Route path="/" element={renderRedirect()} />
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            {/* Root Route: Decides whether to show Login or Redirect based on Role */}
+            <Route path="/" element={renderRedirect()} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute roles={['resident']}>
-                <DashboardPage onLogout={signOut} />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute roles={['resident']}>
+                  <DashboardPage onLogout={signOut} />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute roles={['admin', 'super_admin']}>
-                <AdminPage onLogout={signOut} />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute roles={['admin', 'super_admin']}>
+                  <AdminPage onLogout={signOut} />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/guardia-bienvenida"
-            element={
-              <ProtectedRoute roles={['guardia']}>
-                <GuardiaLandingPage onLogout={signOut} />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/guardia-bienvenida"
+              element={
+                <ProtectedRoute roles={['guardia']}>
+                  <GuardiaLandingPage onLogout={signOut} />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/guardia"
-            element={
-              <ProtectedRoute roles={['guardia']}>
-                <GuardiaPage onLogout={signOut} />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/guardia"
+              element={
+                <ProtectedRoute roles={['guardia']}>
+                  <GuardiaPage onLogout={signOut} />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Password recovery — public route, no auth required */}
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+            {/* Password recovery — public route, no auth required */}
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Fallback Route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback Route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </div>
     </BrowserRouter>
   );

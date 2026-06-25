@@ -150,7 +150,7 @@ const useReservations = (userInfo) => {
       toast({ title: "Error", description: "Se requiere un motivo para la cancelación.", variant: "destructive" });
       return;
     }
-     try {
+    try {
       const { data: cancelledReservation, error } = await supabase
         .from('reservations')
         .update({ status: 'cancelled', cancellation_reason: reason })
@@ -161,9 +161,15 @@ const useReservations = (userInfo) => {
       if (error) throw error;
 
       toast({
-        title: "Reserva Cancelada por Admin",
-        description: "La reserva ha sido cancelada.",
+        title: "Reserva Cancelada",
+        description: "La reserva ha sido cancelada y se notificará al residente.",
       });
+
+      // Notify resident via Edge Function
+      supabase.functions.invoke('send-push-notification', {
+        body: { reservaData: { ...cancelledReservation, cancellation_reason: reason } },
+      }).catch((e) => console.error('Error sending resident notification:', e));
+
       refetch();
     } catch (error) {
       console.error("Error canceling reservation by admin", error);
@@ -215,17 +221,23 @@ const useReservations = (userInfo) => {
     return reservations.filter(r => r.user_id === userInfo.id && (r.status === 'confirmed' || r.status === 'in_progress'));
   }, [reservations, userInfo]);
 
+  const getAllUserReservations = useCallback(() => {
+    if (!userInfo?.id) return [];
+    return reservations.filter(r => r.user_id === userInfo.id);
+  }, [reservations, userInfo]);
+
   return {
     reservations,
     loading,
     refetch,
     handleReservation: createReservation,
-    createReservation, 
+    createReservation,
     cancelReservation,
     cancelReservationWithReason,
     updateReservationStatus,
     isTimeSlotTaken,
     getUserReservations,
+    getAllUserReservations,
   };
 };
 

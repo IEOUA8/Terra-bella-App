@@ -1,11 +1,68 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, PlusCircle } from 'lucide-react';
+import { Calendar, PlusCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const MyReservations = ({ reservations, onCancel, onNewReservation }) => {
+const STATUS_CONFIG = {
+  confirmed: { label: 'Confirmada', icon: CheckCircle, color: 'bg-green-500' },
+  in_progress: { label: 'En curso', icon: Clock, color: 'bg-blue-500' },
+  cancelled: { label: 'Cancelada', icon: XCircle, color: 'bg-red-500' },
+  completed: { label: 'Completada', icon: CheckCircle, color: 'bg-gray-500' },
+};
+
+const ReservationCard = ({ reservation, onCancel, showCancel }) => {
+  const cfg = STATUS_CONFIG[reservation.status] || STATUS_CONFIG.confirmed;
+  const Icon = cfg.icon;
+
+  return (
+    <div className="flex items-center justify-between bg-white/5 rounded-lg p-4 gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{reservation.area_name}</div>
+        <div className="text-sm text-gray-400">
+          {format(new Date(reservation.date + 'T00:00:00'), 'EEE, dd MMM yyyy', { locale: es })} · {reservation.time}
+        </div>
+        {reservation.cancellation_reason && (
+          <div className="text-xs text-red-400 mt-1">Motivo: {reservation.cancellation_reason}</div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Badge className={`${cfg.color} text-white text-xs flex items-center gap-1`}>
+          <Icon className="h-3 w-3" />
+          {cfg.label}
+        </Badge>
+        {showCancel && (
+          <Button variant="destructive" size="sm" onClick={() => onCancel(reservation.id)}>
+            Cancelar
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({ onNewReservation, message }) => (
+  <div className="text-center py-8">
+    <p className="text-gray-400">{message}</p>
+    {onNewReservation && (
+      <Button
+        onClick={onNewReservation}
+        className="mt-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+      >
+        <PlusCircle className="w-5 h-5 mr-2" />
+        Hacer una reserva
+      </Button>
+    )}
+  </div>
+);
+
+const MyReservations = ({ reservations, onCancel, onNewReservation, loading }) => {
+  const active = reservations.filter(r => r.status === 'confirmed' || r.status === 'in_progress');
+  const history = reservations.filter(r => r.status === 'cancelled' || r.status === 'completed');
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -14,40 +71,57 @@ const MyReservations = ({ reservations, onCancel, onNewReservation }) => {
     >
       <h3 className="text-xl font-semibold mb-4 flex items-center">
         <Calendar className="w-5 h-5 mr-2" />
-        Mis Reservas Activas
+        Mis Reservas
       </h3>
-      {reservations.length === 0 ? (
-        <div className="text-center py-4">
-          <p className="text-gray-400">No tienes reservas activas</p>
-          <Button
-            onClick={onNewReservation}
-            className="mt-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-          >
-            <PlusCircle className="w-5 h-5 mr-2" />
-            Hacer una reserva
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {reservations.map((reservation) => (
-            <div key={reservation.id} className="flex items-center justify-between bg-white/5 rounded-lg p-4">
-              <div>
-                <div className="font-medium">{reservation.area_name}</div>
-                <div className="text-sm text-gray-400">
-                  {format(new Date(reservation.date + 'T00:00:00'), 'EEE, dd MMM yyyy', { locale: es })} a las {reservation.time}
-                </div>
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => onCancel(reservation.id)}
-              >
-                Cancelar
-              </Button>
+
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 mb-4">
+          <TabsTrigger value="active">
+            Activas
+            {active.length > 0 && (
+              <span className="ml-2 bg-brand-500 text-white text-xs rounded-full px-1.5 py-0.5">{active.length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="history">Historial</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active">
+          {loading ? (
+            <div className="text-center py-8 text-gray-400">Cargando...</div>
+          ) : active.length === 0 ? (
+            <EmptyState onNewReservation={onNewReservation} message="No tienes reservas activas" />
+          ) : (
+            <div className="space-y-3">
+              {active.map((r) => (
+                <ReservationCard key={r.id} reservation={r} onCancel={onCancel} showCancel />
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
+          <div className="mt-4 text-center">
+            <Button
+              onClick={onNewReservation}
+              variant="ghost"
+              className="text-brand-300 hover:text-white"
+            >
+              <PlusCircle className="w-4 h-4 mr-2" /> Nueva reserva
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history">
+          {loading ? (
+            <div className="text-center py-8 text-gray-400">Cargando...</div>
+          ) : history.length === 0 ? (
+            <EmptyState message="No tienes reservas en el historial" />
+          ) : (
+            <div className="space-y-3">
+              {history.map((r) => (
+                <ReservationCard key={r.id} reservation={r} onCancel={null} showCancel={false} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </motion.div>
   );
 };

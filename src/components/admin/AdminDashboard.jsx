@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import ReservationsTable from '@/components/admin/ReservationsTable';
 import UsageStatistics from '@/components/admin/UsageStatistics';
 import ResidentStatistics from '@/components/admin/ResidentStatistics';
+import ResidentsPanel from '@/components/admin/ResidentsPanel';
 import { socialAreas } from '@/data/socialAreas';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NotificationAuditDashboard from './NotificationAuditDashboard';
@@ -75,14 +76,18 @@ const AdminDashboard = ({ reservations, onCancelReservation, loading }) => {
       className="space-y-8"
     >
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50">
           <TabsTrigger value="dashboard">
             <CalendarCheck className="mr-2 h-4 w-4" />
-            Dashboard de Reservas
+            Reservas
+          </TabsTrigger>
+          <TabsTrigger value="residents">
+            <Users className="mr-2 h-4 w-4" />
+            Residentes
           </TabsTrigger>
           <TabsTrigger value="audit">
             <ListChecks className="mr-2 h-4 w-4" />
-            Auditoría de Notificaciones
+            Auditoría
           </TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="mt-6">
@@ -126,6 +131,9 @@ const AdminDashboard = ({ reservations, onCancelReservation, loading }) => {
           <div className="mt-8">
             <ReservationsTable reservations={reservations} onCancelReservation={onCancelReservation} />
           </div>
+        </TabsContent>
+        <TabsContent value="residents" className="mt-6">
+          <ResidentsPanel />
         </TabsContent>
         <TabsContent value="audit" className="mt-6">
           <NotificationAuditDashboard />

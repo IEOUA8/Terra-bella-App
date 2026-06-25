@@ -112,77 +112,107 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Obtener suscripciones activas de guardias
-    const { data: subscriptions, error: subError } = await supabaseAdmin
-      .from('push_subscriptions')
-      .select('subscription')
-      .eq('role', 'guardia')
-      .eq('is_active', true);
-
-    if (subError) throw new Error(`Error obteniendo suscripciones: ${subError.message}`);
-    if (!subscriptions?.length) {
-      return new Response(
-        JSON.stringify({ message: 'No hay guardias suscritos.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-
     const areaName = String(reservaData.area_name ?? 'Área Común');
     const userName = String(reservaData.user_name ?? 'Residente');
     const tower = String(reservaData.tower ?? '');
     const apartment = String(reservaData.apartment ?? '');
     const status = String(reservaData.status);
+    const reservationUserId = reservaData.user_id ? String(reservaData.user_id) : null;
 
-    let title: string;
-    let body: string;
+    let guardiaTitle: string;
+    let guardiaBody: string;
     if (status === 'confirmed') {
-      title = `✅ Nueva Reserva: ${areaName}`;
-      body = `${userName} (T${tower} Apto ${apartment}) ha reservado.`;
+      guardiaTitle = `✅ Nueva Reserva: ${areaName}`;
+      guardiaBody = `${userName} (T${tower} Apto ${apartment}) ha reservado.`;
     } else if (status === 'cancelled') {
-      title = `❌ Reserva Cancelada: ${areaName}`;
-      body = `La reserva de ${userName} ha sido cancelada.`;
+      guardiaTitle = `❌ Reserva Cancelada: ${areaName}`;
+      guardiaBody = `La reserva de ${userName} ha sido cancelada.`;
     } else {
-      title = `🔔 Actualización: ${areaName}`;
-      body = `Estado de reserva de ${userName} → ${status}`;
+      guardiaTitle = `🔔 Actualización: ${areaName}`;
+      guardiaBody = `Estado de reserva de ${userName} → ${status}`;
     }
 
-    const payload = JSON.stringify({
-      title,
-      body,
-      data: {
-        url: '/guardia',
-        reservationId: String(reservaData.id ?? ''),
-        areaName,
-        status,
-      },
-    });
+    // ── Notificación a guardias ─────────────────────────────────────────────
+    const { data: guardiaSubscriptions } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('subscription')
+      .eq('role', 'guardia')
+      .eq('is_active', true);
 
-    // Insertar registro en notification_logs y enviar notificaciones en la DB
-    await supabaseAdmin.from('notifications').insert({
-      type: status === 'confirmed' ? 'reservation_created' : 'reservation_cancelled',
-      title,
-      body,
-      recipient_role: 'guardia',
-      metadata: { reservation_id: reservaData.id, area_name: areaName },
-    });
+    let guardiaSucceeded = 0;
+    let guardiaFailed = 0;
 
-    const results = await Promise.allSettled(
-      subscriptions.map((row) => sendWebPush(row.subscription, payload))
-    );
+    if (guardiaSubscriptions?.length) {
+      const guardiaPayload = JSON.stringify({
+        title: guardiaTitle,
+        body: guardiaBody,
+        data: { url: '/guardia', reservationId: String(reservaData.id ?? ''), areaName, status },
+      });
 
-    const succeeded = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length;
-    const failed = results.length - succeeded;
+      await supabaseAdmin.from('notifications').insert({
+        type: status === 'confirmed' ? 'reservation_created' : 'reservation_cancelled',
+        title: guardiaTitle,
+        body: guardiaBody,
+        recipient_role: 'guardia',
+        metadata: { reservation_id: reservaData.id, area_name: areaName },
+      });
+
+      const guardiaResults = await Promise.allSettled(
+        guardiaSubscriptions.map((row) => sendWebPush(row.subscription, guardiaPayload))
+      );
+      guardiaSucceeded = guardiaResults.filter((r) => r.status === 'fulfilled' && (r as PromiseFulfilledResult<{ ok: boolean }>).value.ok).length;
+      guardiaFailed = guardiaResults.length - guardiaSucceeded;
+    }
+
+    // ── Notificación al residente cuando cancela el admin ──────────────────
+    let residentSucceeded = 0;
+    if (status === 'cancelled' && reservationUserId) {
+      const residentTitle = `❌ Tu reserva fue cancelada`;
+      const residentBody = `Tu reserva de ${areaName} ha sido cancelada por administración.`;
+      const cancellationReason = reservaData.cancellation_reason ? String(reservaData.cancellation_reason) : null;
+
+      // Insert notification for the resident
+      await supabaseAdmin.from('notifications').insert({
+        type: 'reservation_cancelled',
+        title: residentTitle,
+        body: cancellationReason ? `${residentBody} Motivo: ${cancellationReason}` : residentBody,
+        recipient_user_id: reservationUserId,
+        metadata: { reservation_id: reservaData.id, area_name: areaName, cancellation_reason: cancellationReason },
+      });
+
+      // Send push notification to resident if subscribed
+      const { data: residentSubs } = await supabaseAdmin
+        .from('push_subscriptions')
+        .select('subscription')
+        .eq('user_id', reservationUserId)
+        .eq('is_active', true);
+
+      if (residentSubs?.length) {
+        const residentPayload = JSON.stringify({
+          title: residentTitle,
+          body: cancellationReason ? `${residentBody} Motivo: ${cancellationReason}` : residentBody,
+          data: { url: '/dashboard', reservationId: String(reservaData.id ?? ''), areaName, status },
+        });
+        const residentResults = await Promise.allSettled(
+          residentSubs.map((row) => sendWebPush(row.subscription, residentPayload))
+        );
+        residentSucceeded = residentResults.filter((r) => r.status === 'fulfilled' && (r as PromiseFulfilledResult<{ ok: boolean }>).value.ok).length;
+      }
+    }
+
+    const totalSucceeded = guardiaSucceeded + residentSucceeded;
+    const totalFailed = guardiaFailed;
 
     // Log en notification_logs
     await supabaseAdmin.from('notification_logs').insert({
       source: 'push',
-      status: failed === results.length ? 'error' : 'success',
-      error_message: failed > 0 ? `${failed} de ${results.length} envíos fallaron` : null,
-      metadata: { succeeded, failed, total: results.length },
+      status: totalFailed > 0 && totalSucceeded === 0 ? 'error' : 'success',
+      error_message: totalFailed > 0 ? `${totalFailed} envíos a guardia fallaron` : null,
+      metadata: { guardiaSucceeded, guardiaFailed, residentSucceeded },
     });
 
     return new Response(
-      JSON.stringify({ success: true, message: `${succeeded}/${results.length} notificaciones enviadas.` }),
+      JSON.stringify({ success: true, message: `${totalSucceeded} notificaciones enviadas.` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: unknown) {
