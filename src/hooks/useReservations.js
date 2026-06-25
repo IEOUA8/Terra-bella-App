@@ -39,75 +39,19 @@ const useReservations = (userInfo) => {
   
   useEffect(() => {
     const channel = supabase.channel('realtime-reservations')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, (payload) => {
-        console.log('Change received!', payload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
         refetch();
       })
-      .subscribe()
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-    }
+    };
   }, [refetch]);
 
-  // The sendPushNotification and sendCancellationNotification functions are no longer needed
-  // as notifications are now handled by Supabase webhooks/Edge Functions.
-  // Keeping them commented out for reference or potential future use if needed,
-  // but their calls are removed from the reservation flow.
-
-  /*
-  const sendPushNotification = async (reservaData) => {
-    try {
-      const payload = { reservaData };
-      console.log('DEBUG: Sending payload to Edge Function:', payload);
-
-      const { data, error } = await supabase.functions.invoke('send-push-notification', {
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (error) {
-        throw new Error(`Error invoking Edge Function: ${error.message}`);
-      }
-
-      console.log('📅 Push notification function invoked successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ Error sending push notification:', error);
-      // We don't throw here to prevent blocking the reservation success flow
-      return { success: false, error: error.message };
-    }
-  };
-
-  const sendCancellationNotification = async (reservaData) => {
-    try {
-      const payload = { reservaData };
-      console.log('DEBUG: Sending cancellation payload to Edge Function:', payload);
-
-      const { data, error } = await supabase.functions.invoke('send-push-notification', {
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (error) {
-         throw new Error(`Error invoking Edge Function: ${error.message}`);
-      }
-
-      console.log('🗑️ Cancellation notification function invoked successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ Error sending cancellation notification:', error);
-    }
-  };
-  */
-
   const createReservation = useCallback(async (area, date, time, customDetails = null) => {
-    // Debug log for guide verification
-    console.log('🚀 Starting createReservation:', { area: area?.name, date, time, customDetails, currentUser: userInfo?.id });
-
     // 1. Validation: Check for required basic fields
     if (!area || !date || !time) {
-      console.warn('⚠️ Reservation failed: Missing required fields');
       toast({
         title: "Información incompleta",
         description: "Por favor selecciona un área, fecha y hora para reservar.",
@@ -150,7 +94,6 @@ const useReservations = (userInfo) => {
 
     try {
       // 4. Database Interaction
-      console.log('💾 Inserting reservation into Supabase:', newReservationData);
       const { data: newReservation, error } = await supabase
         .from('reservations')
         .insert(newReservationData)
@@ -162,11 +105,7 @@ const useReservations = (userInfo) => {
         throw error;
       }
       
-      console.log('✅ Reservation created successfully:', newReservation);
-
-      // 5. Post-creation side effects (Notifications, refetch)
-      // await sendPushNotification(newReservation); // Removed as requested by the user
-      refetch(); 
+      refetch();
       return newReservation;
 
     } catch (error) {
@@ -195,10 +134,9 @@ const useReservations = (userInfo) => {
         title: "Reserva cancelada",
         description: "Tu reserva ha sido cancelada exitosamente",
       });
-      // await sendCancellationNotification(cancelledReservation); // Removed as requested by the user
       refetch();
     } catch (error) {
-       console.error("Error canceling reservation in Supabase", error);
+      console.error("Error canceling reservation in Supabase", error);
       toast({
         title: "Error al Cancelar",
         description: "No se pudo cancelar la reserva. Inténtalo de nuevo.",
@@ -226,10 +164,9 @@ const useReservations = (userInfo) => {
         title: "Reserva Cancelada por Admin",
         description: "La reserva ha sido cancelada.",
       });
-      // await sendCancellationNotification(cancelledReservation); // Removed as requested by the user
       refetch();
     } catch (error) {
-       console.error("Error canceling reservation by admin", error);
+      console.error("Error canceling reservation by admin", error);
       toast({
         title: "Error al Cancelar",
         description: "No se pudo cancelar la reserva.",

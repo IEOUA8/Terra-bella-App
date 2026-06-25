@@ -100,7 +100,7 @@ const DashboardPage = ({ onLogout }) => {
             className="flex items-center gap-3"
           >
              <img 
-               src="https://images.unsplash.com/photo-1525280996482-4beab0fdd409" 
+               src="/icons/icon-192x192.png" 
                alt="TerraBell Logo" 
                className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg shadow-brand-500/20" 
              />

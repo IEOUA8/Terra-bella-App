@@ -1,20 +1,43 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button } from '@/components/ui/button';
-import { LogOut, PlusCircle, Zap } from 'lucide-react';
+import { LogOut, PlusCircle, Zap, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import StaffReservationDialog from '@/components/staff/StaffReservationDialog';
 import QuickReservationModal from '@/components/QuickReservationModal';
+import CreateResidentDialog from '@/components/staff/CreateResidentDialog';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import useReservations from '@/hooks/useReservations';
-import NotificationBadge from '@/components/NotificationBadge'; 
+import NotificationBadge from '@/components/NotificationBadge';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const AdminPage = ({ onLogout }) => {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const [isStaffReservationOpen, setStaffReservationOpen] = useState(false);
   const [isQuickReservationOpen, setQuickReservationOpen] = useState(false);
+  const [isCreateResidentOpen, setCreateResidentOpen] = useState(false);
   const { reservations, loading, handleReservation, cancelReservationWithReason, isTimeSlotTaken } = useReservations(profile);
+
+  const handleCreateResident = async (residentData) => {
+    const { data, error } = await supabase.functions.invoke('admin-create-resident', {
+      body: residentData,
+    });
+    if (error || data?.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al crear residente',
+        description: data?.error || error?.message || 'Error desconocido',
+      });
+    } else {
+      toast({
+        title: 'Residente creado',
+        description: `Se envió una invitación a ${residentData.email} para que establezca su contraseña.`,
+      });
+    }
+  };
 
   // Wrapper for staff dialog which collects complex resident details
   const handleStaffReservation = async (area, date, time, residentDetails) => {
@@ -43,7 +66,7 @@ const AdminPage = ({ onLogout }) => {
         >
           <div className="flex items-center gap-4">
             <img 
-               src="https://images.unsplash.com/photo-1525280996482-4beab0fdd409" 
+               src="/icons/icon-192x192.png" 
                alt="TerraBell Logo" 
                className="h-14 w-14 rounded-lg object-cover border-2 border-brand-500 shadow-xl" 
             />
@@ -62,6 +85,10 @@ const AdminPage = ({ onLogout }) => {
             <Button variant="outline" className="bg-white/10 hover:bg-white/20 border-white/10" onClick={() => setStaffReservationOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nueva Reserva
+            </Button>
+            <Button variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:text-white" onClick={() => setCreateResidentOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Crear Residente
             </Button>
             <NotificationBadge />
             <Button variant="ghost" onClick={onLogout} className="hover:bg-red-500/20 hover:text-red-200">
@@ -92,9 +119,13 @@ const AdminPage = ({ onLogout }) => {
         onClose={() => setQuickReservationOpen(false)}
         onCreateReservation={handleReservation}
         isTimeSlotTaken={isTimeSlotTaken}
-        onSuccess={(reservation) => {
-            console.log('Quick reservation created:', reservation);
-        }}
+        onSuccess={() => {}}
+      />
+
+      <CreateResidentDialog
+        isOpen={isCreateResidentOpen}
+        onClose={() => setCreateResidentOpen(false)}
+        onCreateResident={handleCreateResident}
       />
     </>
   );
