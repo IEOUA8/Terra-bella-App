@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Bell, BellOff } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import ReservationForm from '@/components/ReservationForm';
 import Dashboard from '@/components/Dashboard';
@@ -10,6 +10,7 @@ import useReservations from '@/hooks/useReservations';
 import { useToast } from "@/components/ui/use-toast";
 import MyReservations from '@/components/MyReservations';
 import ProfileModal from '@/components/ProfileModal';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 const DashboardPage = ({ onLogout }) => {
   const { user, profile } = useAuth();
@@ -29,6 +30,7 @@ const DashboardPage = ({ onLogout }) => {
   const [selectedArea, setSelectedArea] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [localProfile, setLocalProfile] = useState(profile);
+  const { isSupported: pushSupported, permission, isSubscribed, requestPermission, unsubscribe } = usePushNotifications();
 
   const allUserReservations = getAllUserReservations();
 
@@ -122,6 +124,17 @@ const DashboardPage = ({ onLogout }) => {
             </div>
           </motion.div>
           <div className="flex items-center gap-2">
+            {pushSupported && permission !== 'denied' && (
+              <Button
+                onClick={isSubscribed ? unsubscribe : requestPermission}
+                variant="ghost"
+                size="sm"
+                className="text-brand-300 hover:text-white hover:bg-brand-500/20"
+                title={isSubscribed ? 'Desactivar notificaciones' : 'Activar notificaciones push'}
+              >
+                {isSubscribed ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+              </Button>
+            )}
             <Button
               onClick={() => setIsProfileOpen(true)}
               variant="ghost"

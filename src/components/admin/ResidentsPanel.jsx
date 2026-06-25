@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Pencil, Search, Users } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ROLE_LABELS = { resident: 'Residente', admin: 'Admin', super_admin: 'Super Admin', guardia: 'Guardia' };
 const ROLE_COLORS = { resident: 'bg-blue-500', admin: 'bg-purple-500', super_admin: 'bg-red-500', guardia: 'bg-amber-500' };
@@ -133,9 +134,25 @@ const ResidentsPanel = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        <span>Cargando usuarios...</span>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-5 w-36 bg-slate-700" />
+          <Skeleton className="h-9 w-64 bg-slate-700 rounded-md" />
+        </div>
+        <div className="rounded-lg border border-slate-700 overflow-hidden">
+          <div className="bg-slate-800/60 px-4 py-3 grid grid-cols-6 gap-4">
+            {[140, 180, 120, 100, 80, 32].map((w, i) => (
+              <Skeleton key={i} className="h-4 bg-slate-700" style={{ width: w }} />
+            ))}
+          </div>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="px-4 py-3 grid grid-cols-6 gap-4 border-t border-slate-700/50">
+              {[140, 180, 120, 100, 80, 32].map((w, j) => (
+                <Skeleton key={j} className="h-4 bg-slate-700/50" style={{ width: w }} />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import AuthPage from '@/pages/AuthPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import PWAStatus from '@/components/PWAStatus';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Loader2, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -205,6 +206,7 @@ function App() {
         {/* PWA Install Prompt */}
         <PWAInstallPrompt />
 
+        <ErrorBoundary>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Root Route: Decides whether to show Login or Redirect based on Role */}
@@ -254,6 +256,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </div>
     </BrowserRouter>
   );
