@@ -47,10 +47,9 @@ const ActionsMenu = ({ reservation, onCancel, onUpdate }) => {
   const [dialogState, setDialogState] = useState({ isOpen: false, type: null });
   const { hasPermission } = usePermissions();
   
-  // Permissions check - ensure these permissions exist in your role definition
-  const canCancel = hasPermission('reservations:cancel') || true; // Fallback to true if permission system is not fully set
-  const canHandover = hasPermission('reservations:handover') || true; 
-  const canReceive = hasPermission('reservations:receive') || true;
+  const canCancel = hasPermission('reservations:cancel');
+  const canHandover = hasPermission('reservations:handover');
+  const canReceive = hasPermission('reservations:receive');
 
   const openDialog = (type) => setDialogState({ isOpen: true, type });
   const closeDialog = () => setDialogState({ isOpen: false, type: null });

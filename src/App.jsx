@@ -5,6 +5,7 @@ import AuthPage from '@/pages/AuthPage';
 import DashboardPage from '@/pages/DashboardPage';
 import AdminPage from '@/pages/AdminPage';
 import GuardiaPage from '@/pages/GuardiaPage';
+import GuardiaLandingPage from '@/pages/GuardiaLandingPage';
 import PWAStatus from '@/components/PWAStatus';
 import { Loader2, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -187,7 +188,7 @@ function App() {
       return <Navigate to="/admin" replace />;
     }
     if (userRole === 'guardia') {
-      return <Navigate to="/guardia" replace />;
+      return <Navigate to="/guardia-bienvenida" replace />;
     }
 
     return <Navigate to="/dashboard" replace />;
@@ -210,7 +211,7 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={['resident']}>
                 <DashboardPage onLogout={signOut} />
               </ProtectedRoute>
             }
@@ -221,6 +222,15 @@ function App() {
             element={
               <ProtectedRoute roles={['admin', 'super_admin']}>
                 <AdminPage onLogout={signOut} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/guardia-bienvenida"
+            element={
+              <ProtectedRoute roles={['guardia']}>
+                <GuardiaLandingPage onLogout={signOut} />
               </ProtectedRoute>
             }
           />

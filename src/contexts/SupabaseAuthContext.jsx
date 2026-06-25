@@ -12,30 +12,22 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // NEW: Check if apartment is already registered
   const checkApartmentAvailability = useCallback(async (tower, apartment) => {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, full_name')
-        .eq('tower', tower)
-        .eq('apartment', apartment)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      const { data, error } = await supabase.rpc('check_apartment_available', {
+        p_tower: tower,
+        p_apartment: apartment,
+      });
+      if (error) {
         console.error('Error checking apartment:', error);
         return { available: false, error: 'Error verificando disponibilidad del apartamento' };
       }
-
-      // If data exists, apartment is already taken
-      if (data) {
-        return { 
-          available: false, 
-          error: `El apartamento Torre ${tower} - Apto ${apartment} ya está registrado por ${data.full_name || 'otro residente'}`,
-          existingResident: data
+      if (data === false) {
+        return {
+          available: false,
+          error: `El apartamento Torre ${tower} - Apto ${apartment} ya está registrado`,
         };
       }
-
       return { available: true };
     } catch (error) {
       console.error('Error in checkApartmentAvailability:', error);
@@ -43,31 +35,22 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // NEW: Check if email already exists
   const checkEmailAvailability = useCallback(async (email) => {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, tower, apartment')
-        .eq('email', email)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
+      const { data, error } = await supabase.rpc('check_email_available', {
+        p_email: email,
+      });
+      if (error) {
         console.error('Error checking email:', error);
-        return { available: false, error: 'Error verificando disponibilidad del email' };
+        return { available: false, error: 'Error verificando disponibilidad del correo' };
       }
-
-      if (data) {
-        return { 
-          available: false, 
-          error: `El correo electrónico ya está registrado para ${data.full_name || 'otro residente'} (Torre ${data.tower} - Apto ${data.apartment})`
-        };
+      if (data === false) {
+        return { available: false, error: 'El correo electrónico ya está registrado' };
       }
-
       return { available: true };
     } catch (error) {
       console.error('Error in checkEmailAvailability:', error);
-      return { available: false, error: 'Error verificando disponibilidad del email' };
+      return { available: false, error: 'Error verificando disponibilidad del correo' };
     }
   }, []);
 
@@ -186,28 +169,12 @@ export const AuthProvider = ({ children }) => {
         return { error };
       }
 
-      // Check if profile was created by trigger
+      // Trigger on auth.users handles profile creation automatically.
       if (data.user) {
         setTimeout(async () => {
-          const profile = await fetchProfile(data.user);
-          if (!profile) {
-            console.warn('Profile not created by trigger for user:', data.user.id);
-            // You might want to manually create the profile here
-            const { error: profileError } = await supabase
-              .from('user_profiles')
-              .insert({
-                id: data.user.id,
-                email: email,
-                full_name: name,
-                tower: tower,
-                apartment: apartment,
-                phone: phone,
-                role: 'resident'
-              });
-
-            if (profileError) {
-              console.error('Failed to create profile manually:', profileError);
-            }
+          const existingProfile = await fetchProfile(data.user);
+          if (!existingProfile) {
+            console.warn('Profile not found after signup for user:', data.user.id, '- trigger may have failed');
           }
         }, 2000);
       }
@@ -254,6 +221,25 @@ export const AuthProvider = ({ children }) => {
     return { error };
   }, [toast]);
 
+  const resetPassword = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al enviar correo',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: 'Correo enviado',
+        description: 'Revisa tu bandeja de entrada para el enlace de recuperación.',
+      });
+    }
+    return { error };
+  }, [toast]);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
 
@@ -278,10 +264,11 @@ export const AuthProvider = ({ children }) => {
     signUp,
     signIn,
     signOut,
+    resetPassword,
     displayToast: toast,
-    checkApartmentAvailability, // Export for use in forms
-    checkEmailAvailability, // Export for use in forms
-  }), [user, profile, session, loading, signUp, signIn, signOut, toast, checkApartmentAvailability, checkEmailAvailability]);
+    checkApartmentAvailability,
+    checkEmailAvailability,
+  }), [user, profile, session, loading, signUp, signIn, signOut, resetPassword, toast, checkApartmentAvailability, checkEmailAvailability]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

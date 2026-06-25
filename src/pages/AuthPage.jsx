@@ -12,7 +12,7 @@ import React, { useState, useMemo } from 'react';
     import { useToast } from '@/components/ui/use-toast';
 
     const AuthPage = () => {
-      const { signIn, signUp } = useAuth();
+      const { signIn, signUp, resetPassword } = useAuth();
       const { toast } = useToast();
       const [loading, setLoading] = useState(false);
       const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -83,12 +83,11 @@ import React, { useState, useMemo } from 'react';
 
       const handlePasswordRecovery = async (e) => {
         e.preventDefault();
+        if (!formData.forgotPasswordEmail) return;
         setLoading(true);
-        toast({
-          title: "🚧 Función no implementada",
-          description: "La recuperación de contraseña no está disponible aún.",
-        });
+        await resetPassword(formData.forgotPasswordEmail);
         setLoading(false);
+        setIsForgotPassword(false);
       };
       
       const tabsComponent = useMemo(() => (
