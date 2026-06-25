@@ -86,10 +86,8 @@ export const AuthProvider = ({ children }) => {
       const userProfile = await fetchProfile(session.user);
       setProfile(userProfile);
       
-      // If profile doesn't exist, try to create it
       if (!userProfile && session.user) {
-        console.log('Attempting to create missing profile...');
-        // You might want to manually create the profile here
+        console.error('Profile missing for authenticated user:', session.user.id);
       }
     } else {
       setProfile(null);
@@ -106,8 +104,7 @@ export const AuthProvider = ({ children }) => {
     getSession();
 
     const { data: { subscription } = {} } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
+      async (_event, session) => {
         await handleSession(session);
       }
     );

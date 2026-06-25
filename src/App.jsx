@@ -6,6 +6,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import AdminPage from '@/pages/AdminPage';
 import GuardiaPage from '@/pages/GuardiaPage';
 import GuardiaLandingPage from '@/pages/GuardiaLandingPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import PWAStatus from '@/components/PWAStatus';
 import { Loader2, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -243,6 +244,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Password recovery — public route, no auth required */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Fallback Route */}
           <Route path="*" element={<Navigate to="/" replace />} />

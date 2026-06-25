@@ -11,11 +11,6 @@ const NotificationInitializer = () => {
   const { toast } = useToast();
   const { isSupported, permission } = usePushNotifications();
 
-  useEffect(() => {
-    if (isSupported) {
-      console.log('[Notifications] Push soportadas. Estado:', permission);
-    }
-  }, [isSupported, permission]);
 
   useEffect(() => {
     if (!profile) return;

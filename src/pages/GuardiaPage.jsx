@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, BellRing, Bell } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 import useReservations from '@/hooks/useReservations';
 import GuardiaDashboard from '@/components/guardia/GuardiaDashboard';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -10,6 +11,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const GuardiaPage = ({ onLogout }) => {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const {
     reservations,
     loading,
@@ -22,15 +24,10 @@ const GuardiaPage = ({ onLogout }) => {
 
   const handleActivateNotifications = async () => {
     if (permission === 'granted') {
-      alert('Las notificaciones ya están activadas. ¡Recibirás alertas automáticamente! ✨');
+      toast({ title: 'Notificaciones activas', description: 'Recibirás alertas automáticamente.' });
       return;
     }
-    const success = await requestPermission();
-    if (success) {
-      alert('¡Genial! Notificaciones activadas correctamente. 🔔');
-    } else {
-      // Alert is handled in hook via toast
-    }
+    await requestPermission();
   };
 
   return (
@@ -38,9 +35,9 @@ const GuardiaPage = ({ onLogout }) => {
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div className="flex items-center gap-4">
           <img 
-               src="https://images.unsplash.com/photo-1525280996482-4beab0fdd409" 
-               alt="TerraBell Logo" 
-               className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg" 
+               src="/icons/icon-192x192.png"
+               alt="TerraBell Logo"
+               className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg"
           />
           <div>
             <h1 className="text-3xl font-bold text-brand-300">Portal de Guardia</h1>

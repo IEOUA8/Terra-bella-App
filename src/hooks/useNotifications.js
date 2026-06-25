@@ -86,7 +86,6 @@ export const useNotifications = () => {
           filter: `recipient_role=eq.${profile.role}`,
         },
         (payload) => {
-          console.log('Realtime notification change received:', payload);
           if (payload.eventType === 'INSERT') {
             setNotifications(prev => [payload.new, ...prev]);
             setUnreadCount(prev => prev + 1);
