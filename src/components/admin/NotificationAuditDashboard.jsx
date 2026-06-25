@@ -79,7 +79,7 @@ const NotificationAuditDashboard = () => {
             <SelectContent className="bg-slate-800 text-white border-slate-700">
               <SelectItem value="all">Todos los Orígenes</SelectItem>
               <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="fcm">FCM</SelectItem>
+              <SelectItem value="push">Push</SelectItem>
               <SelectItem value="sms">SMS</SelectItem>
               <SelectItem value="system">Sistema</SelectItem>
             </SelectContent>

@@ -1,98 +1,115 @@
-import { useState, useEffect } from 'react';
-import { messaging } from '@/lib/firebase';
-import { getToken } from 'firebase/messaging';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
-// Named export to match usage in components (e.g., { usePushNotifications })
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
 export const usePushNotifications = () => {
   const { user, profile } = useAuth();
+  const { toast } = useToast();
   const [permission, setPermission] = useState('default');
-  const [fcmToken, setFcmToken] = useState(null);
   const [isSupported, setIsSupported] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setIsSupported(true);
-      setPermission(Notification.permission);
-    }
+    const supported =
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window;
+    setIsSupported(supported);
+    if (supported) setPermission(Notification.permission);
   }, []);
 
-  const saveTokenToDatabase = async (token) => {
+  const saveSubscription = useCallback(async (subscription) => {
     if (!user || !profile) return;
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert(
+        {
+          user_id: user.id,
+          role: profile.role,
+          subscription: subscription.toJSON(),
+          device_type: 'web',
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+    if (error) console.error('Error guardando suscripción push:', error);
+  }, [user, profile]);
 
-    try {
-      if (profile.role === 'guardia') {
-        const { error } = await supabase
-          .from('tokens_fcm_guardias')
-          .upsert({
-            user_id: user.id,
-            fcm_token: token,
-            device_type: 'web',
-            is_active: true,
-            updated_at: new Date().toISOString(),
-            guardia_id: user.id
-          }, { onConflict: 'user_id' });
+  const removeSubscription = useCallback(async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id);
+    if (error) console.error('Error desactivando suscripción push:', error);
+  }, [user]);
 
-        if (error) throw error;
-        console.log('✅ Token de Guardia guardado.');
-      } else {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ fcm_token: token })
-          .eq('id', user.id);
-
-        if (error) throw error;
-        console.log('✅ Token de Usuario guardado.');
-      }
-    } catch (error) {
-      console.error('❌ Error saving token to DB:', error);
-    }
-  };
-
-  const requestPermission = async () => {
-    if (!isSupported) {
-      console.warn('Push notifications not supported');
+  const requestPermission = useCallback(async () => {
+    if (!isSupported) return false;
+    if (!VAPID_PUBLIC_KEY) {
+      console.warn('VITE_VAPID_PUBLIC_KEY no configurada.');
       return false;
     }
 
     try {
-      const permissionResult = await Notification.requestPermission();
-      setPermission(permissionResult);
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result !== 'granted') return false;
 
-      if (permissionResult === 'granted') {
-        if (!messaging) {
-            console.warn('Firebase messaging not initialized');
-            return false;
-        }
-        
-        // Get Token
-        const currentToken = await getToken(messaging, {
-          vapidKey: 'BMwB7n-A1gHkCg_Kz3k5x9q1z3k5x9q1z3k5x9q1'
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
         });
-
-        if (currentToken) {
-          setFcmToken(currentToken);
-          await saveTokenToDatabase(currentToken);
-          return true;
-        }
       }
-    } catch (error) {
-      console.error('Error requesting permission:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron activar las notificaciones.",
-        variant: "destructive"
-      });
-    }
-    return false;
-  };
 
-  return {
-    permission,
-    fcmToken,
-    requestPermission,
-    isSupported
-  };
+      await saveSubscription(subscription);
+      setIsSubscribed(true);
+      return true;
+    } catch (error) {
+      console.error('Error activando push notifications:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron activar las notificaciones push.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [isSupported, saveSubscription, toast]);
+
+  const unsubscribe = useCallback(async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) await subscription.unsubscribe();
+      await removeSubscription();
+      setIsSubscribed(false);
+    } catch (error) {
+      console.error('Error al cancelar suscripción push:', error);
+    }
+  }, [removeSubscription]);
+
+  useEffect(() => {
+    if (!isSupported || !user) return;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => setIsSubscribed(!!sub));
+  }, [isSupported, user]);
+
+  return { permission, isSupported, isSubscribed, requestPermission, unsubscribe };
 };

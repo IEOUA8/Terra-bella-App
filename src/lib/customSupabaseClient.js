@@ -1,13 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://njrpatnmweyrvfcbfdrp.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qcnBhdG5td2V5cnZmY2JmZHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzMTg3NzAsImV4cCI6MjA2ODg5NDc3MH0.tAS94zwwVlMeAUWw_r5sK5h8gFUdi17L7vvmNbULmRY';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Faltan variables de entorno VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY');
+}
 
 const customSupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 export default customSupabaseClient;
 
-export { 
-    customSupabaseClient,
-    customSupabaseClient as supabase,
+export {
+  customSupabaseClient,
+  customSupabaseClient as supabase,
 };

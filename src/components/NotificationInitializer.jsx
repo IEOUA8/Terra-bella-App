@@ -1,41 +1,53 @@
 import React, { useEffect } from 'react';
-import { messaging } from '@/lib/firebase';
-import { onMessage } from 'firebase/messaging';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
+// Escucha notificaciones en tiempo real vía Supabase Realtime y muestra toasts.
+// Las push notifications en background se gestionan directamente en el service-worker.
 const NotificationInitializer = () => {
+  const { profile } = useAuth();
   const { toast } = useToast();
   const { isSupported, permission } = usePushNotifications();
 
-  // Log status for debugging
   useEffect(() => {
     if (isSupported) {
-      console.log('✅ Notificaciones Push soportadas. Estado:', permission);
+      console.log('[Notifications] Push soportadas. Estado:', permission);
     }
   }, [isSupported, permission]);
 
-  // Global listener for foreground messages
   useEffect(() => {
-    if (!messaging) return;
+    if (!profile) return;
 
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log('📩 Mensaje en primer plano recibido:', payload);
-      
-      // Show Toast
-      toast({
-        title: payload.notification?.title || 'Nueva Notificación',
-        description: payload.notification?.body,
-      });
+    const channel = supabase
+      .channel(`realtime-toasts-${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_role=eq.${profile.role}`,
+        },
+        (payload) => {
+          const n = payload.new;
+          toast({
+            title: n.title || 'Nueva notificación',
+            description: n.body || '',
+          });
 
-      // Dispatch custom event for specific app logic (e.g., refreshing tables)
-      if (payload.data?.type === 'nueva_reserva') {
-        window.dispatchEvent(new CustomEvent('new-reservation-notification', { detail: payload.data }));
-      }
-    });
+          if (n.type === 'nueva_reserva') {
+            window.dispatchEvent(
+              new CustomEvent('new-reservation-notification', { detail: n.metadata })
+            );
+          }
+        }
+      )
+      .subscribe();
 
-    return () => unsubscribe && unsubscribe();
-  }, [toast]);
+    return () => supabase.removeChannel(channel);
+  }, [profile, toast]);
 
   return null;
 };
