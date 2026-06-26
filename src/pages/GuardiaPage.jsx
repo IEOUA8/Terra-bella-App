@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, BellRing, Bell } from 'lucide-react';
+import { LogOut, BellRing, Bell, BellOff, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import useReservations from '@/hooks/useReservations';
 import GuardiaDashboard from '@/components/guardia/GuardiaDashboard';
@@ -8,6 +8,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import GuardiaNotificationPanel from '@/components/guardia/GuardiaNotificationPanel';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import NotificationBadge from '@/components/NotificationBadge';
 
 const GuardiaPage = ({ onLogout }) => {
   const { profile } = useAuth();
@@ -20,77 +21,95 @@ const GuardiaPage = ({ onLogout }) => {
     refetch,
   } = useReservations(profile);
 
-  const { requestPermission, permission } = usePushNotifications();
+  const { requestPermission, permission, isSubscribed, unsubscribe } = usePushNotifications();
 
-  const handleActivateNotifications = async () => {
+  const handleToggleNotifications = async () => {
+    if (permission === 'denied') return;
+    if (isSubscribed) { await unsubscribe(); return; }
     if (permission === 'granted') {
-      toast({ title: 'Notificaciones activas', description: 'Recibirás alertas automáticamente.' });
+      toast({ title: 'Notificaciones activas', description: 'Ya estás suscrito a las alertas.' });
       return;
     }
     await requestPermission();
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900/20 to-slate-900 text-white p-4 md:p-8">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <img 
-               src="/icons/icon-192x192.png"
-               alt="TerraBell Logo"
-               className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg"
-          />
-          <div>
-            <h1 className="text-3xl font-bold text-brand-300">Portal de Guardia</h1>
-            <p className="text-slate-400">Gestión de entrega y recepción de áreas sociales.</p>
+    <div className="min-h-screen bg-[#0C1412] text-white">
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-[#0C1412]/95 backdrop-blur-sm border-b border-surface-border px-4 md:px-8 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-accent-700/30 border border-accent-600/40 flex items-center justify-center">
+            <ShieldCheck className="h-4 w-4 text-accent-400" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-white font-semibold text-sm">Portal de Guardia</p>
+            <p className="text-gray-500 text-xs">{profile?.full_name || 'Guardia'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
+
+        <div className="flex items-center gap-1.5">
+          {/* Push toggle */}
+          {permission !== 'denied' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleNotifications}
+              title={isSubscribed ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+              className="text-gray-400 hover:text-accent-300 px-2"
+            >
+              {isSubscribed
+                ? <BellOff className="h-5 w-5" />
+                : <Bell className="h-5 w-5" />
+              }
+            </Button>
+          )}
+
+          {/* Alerts sheet */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                className="relative bg-transparent border-brand-400 text-brand-300 hover:bg-brand-500 hover:text-white"
-              >
-                <Bell className="mr-2 h-4 w-4"/>
-                Alertas
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white px-2 relative">
+                <BellRing className="h-5 w-5" />
+                <span className="sr-only">Alertas</span>
               </Button>
             </SheetTrigger>
-            <SheetContent className="p-0 w-full md:w-[450px] bg-slate-900/95 backdrop-blur-sm border-slate-700 text-white">
-               <GuardiaNotificationPanel />
+            <SheetContent
+              side="right"
+              className="p-0 w-full sm:w-[400px] bg-surface-DEFAULT border-surface-border text-white z-[100]"
+            >
+              <GuardiaNotificationPanel />
             </SheetContent>
           </Sheet>
 
-          <Button
-            variant="outline"
-            className="hidden sm:inline-flex bg-transparent border-emerald-500 text-emerald-400 hover:bg-emerald-500 hover:text-white"
-            onClick={handleActivateNotifications}
-            disabled={permission === 'denied'}
-          >
-            <BellRing className="mr-2 h-4 w-4" />
-            {permission === 'granted' ? 'Notifs. Activas' : 'Activar Notifs.'}
-          </Button>
+          {/* Notification badge (desktop) */}
+          <div className="hidden md:block">
+            <NotificationBadge />
+          </div>
 
-          <Button variant="ghost" onClick={onLogout} className="hover:bg-slate-700">
-            <LogOut className="mr-2 h-4 w-4" />
-            Salir
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onLogout}
+            className="text-gray-400 hover:text-red-300 px-2"
+          >
+            <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </header>
 
-      <main>
-        <GuardiaDashboard 
-          reservations={reservations} 
+      {/* ── Main ─────────────────────────────────────────────────────────────── */}
+      <main className="px-4 md:px-8 py-6 max-w-5xl mx-auto">
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-white">Reservas próximas</h1>
+          <p className="text-sm text-gray-400">Gestiona la entrega y recepción de áreas sociales.</p>
+        </div>
+
+        <GuardiaDashboard
+          reservations={reservations}
           loading={loading}
           onCancelReservation={cancelReservationWithReason}
           onUpdateReservation={updateReservationStatus}
           onRefresh={refetch}
         />
-        <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4 text-white">Panel de Alertas Recientes</h3>
-            <div className="max-h-[600px] overflow-y-auto rounded-lg bg-slate-900/50 p-1 border border-brand-500/20">
-                <GuardiaNotificationPanel />
-            </div>
-        </div>
       </main>
     </div>
   );

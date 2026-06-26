@@ -17,9 +17,9 @@ const GuardiaLandingPage = lazy(() => import('@/pages/GuardiaLandingPage'));
 
 // 1. Reusable Loading Screen Component
 const LoadingScreen = ({ text = "" }) => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-950 flex flex-col items-center justify-center">
-    <Loader2 className="w-8 h-8 animate-spin text-brand-400 mb-2" />
-    {text && <span className="text-white text-xl">{text}</span>}
+  <div className="min-h-screen bg-[#0C1412] flex flex-col items-center justify-center gap-3">
+    <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
+    {text && <span className="text-gray-400 text-base">{text}</span>}
   </div>
 );
 
@@ -126,7 +126,7 @@ const PWAInstallPrompt = () => {
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50"
+        className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[60]"
       >
         <div className="bg-gradient-to-r from-brand-600 to-indigo-600 rounded-lg shadow-2xl p-4 text-white border border-brand-400/20">
           <button
