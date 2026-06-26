@@ -96,7 +96,7 @@ const MyReservations = ({ reservations, onCancel, onNewReservation, loading }) =
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20"
+      className="terra-card p-6"
     >
       <h3 className="text-xl font-semibold mb-4 flex items-center">
         <Calendar className="w-5 h-5 mr-2" />

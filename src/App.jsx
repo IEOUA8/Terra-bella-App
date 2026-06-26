@@ -199,7 +199,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-slate-950 text-white">
+      <div className="min-h-screen bg-[#0C1412] text-white">
         {/* PWA Status Indicator */}
         <PWAStatus />
 

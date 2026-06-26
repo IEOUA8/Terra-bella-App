@@ -117,10 +117,10 @@ const DashboardPage = ({ onLogout }) => {
               className="h-12 w-12 rounded-lg object-cover border-2 border-brand-500 shadow-lg shadow-brand-500/20"
             />
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-brand-300">
-                Bienvenido, {displayProfile?.full_name || user?.email}
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
+                Hola, {displayProfile?.full_name?.split(' ')[0] || 'Residente'}
               </h1>
-              <p className="text-brand-200">Aquí puedes gestionar tus reservaciones.</p>
+              <p className="text-brand-400 text-sm">Terra Bella · Torre {displayProfile?.tower} · Apto {displayProfile?.apartment}</p>
             </div>
           </motion.div>
           <div className="flex items-center gap-2">

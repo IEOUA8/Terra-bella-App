@@ -23,7 +23,7 @@ const Dashboard = ({ onSelectArea, onShowMyReservations }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center bg-slate-800/50 p-8 rounded-2xl border border-white/20"
+          className="text-center terra-card p-8"
         >
           <h2 className="text-2xl font-bold text-yellow-400 mb-4">Perfil Incompleto</h2>
           <p className="text-lg text-slate-300">
